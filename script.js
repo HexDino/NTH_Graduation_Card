@@ -317,15 +317,133 @@ const CONFIG = {
   });
 
   /* ---------- 11. Easter egg: chạm mũ 5 lần hoặc Konami code ---------- */
-  let taps = 0, tapTimer, toastTimer;
+  let taps = 0, tapTimer, toastTimer, eggRunning = false;
   function toast(html, ms) {
     const t = $("toast"); t.innerHTML = html; t.hidden = false;
     t.style.animation = "none"; void t.offsetWidth; t.style.animation = "";
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms || 5200);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms || 5400);
   }
+
+  function playCameraShutterSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === "suspended") ctx.resume();
+      const t0 = ctx.currentTime;
+
+      const makeNoise = (dur, decay) => {
+        const len = Math.floor(ctx.sampleRate * dur);
+        const b = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = b.getChannelData(0);
+        for (let i = 0; i < len; i++) {
+          d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * decay));
+        }
+        return b;
+      };
+
+      // 1. Tiếng mở màn trập (t0)
+      const n1 = ctx.createBufferSource();
+      n1.buffer = makeNoise(0.045, 0.015);
+      const f1 = ctx.createBiquadFilter();
+      f1.type = "bandpass"; f1.frequency.setValueAtTime(2400, t0); f1.Q.setValueAtTime(3.5, t0);
+      const g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.7, t0); g1.gain.exponentialRampToValueAtTime(0.01, t0 + 0.04);
+      n1.connect(f1); f1.connect(g1); g1.connect(ctx.destination);
+      n1.start(t0);
+
+      // 2. Tiếng đập gương lật & đóng màn trập (TÁCH!)
+      const t1 = t0 + 0.06;
+      const osc = ctx.createOscillator();
+      const oscG = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(420, t1);
+      osc.frequency.exponentialRampToValueAtTime(80, t1 + 0.045);
+      oscG.gain.setValueAtTime(0.85, t1);
+      oscG.gain.exponentialRampToValueAtTime(0.001, t1 + 0.045);
+      osc.connect(oscG); oscG.connect(ctx.destination);
+      osc.start(t1); osc.stop(t1 + 0.05);
+
+      const n2 = ctx.createBufferSource();
+      n2.buffer = makeNoise(0.065, 0.02);
+      const f2 = ctx.createBiquadFilter();
+      f2.type = "highpass"; f2.frequency.setValueAtTime(2800, t1);
+      const g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.9, t1); g2.gain.exponentialRampToValueAtTime(0.01, t1 + 0.06);
+      n2.connect(f2); f2.connect(g2); g2.connect(ctx.destination);
+      n2.start(t1);
+
+      setTimeout(() => { ctx.close().catch(() => {}); }, 450);
+    } catch (e) {
+      /* AudioContext fallback */
+    }
+  }
+
   function egg() {
-    toast(`<b>🏆 Achievement unlocked!</b><br>&gt; Bạn đã tìm ra easter egg.<br>&gt; Phần thưởng: 1 tấm ảnh chung với ${escapeHtml(CONFIG.shortName)} vào ngày lễ 📸`);
-    if (!reduce) celebrate(0.6);
+    if (eggRunning) return;
+    eggRunning = true;
+
+    const overlay = $("cameraEgg");
+    const flash = $("cameraFlash");
+    const vf = $("cameraViewfinder");
+    const cam = $("cameraUnit");
+    const shutter = $("camShutterBtn");
+    const iris = $("camIris");
+    const snapText = $("camSnapText");
+
+    if (reduce) {
+      toast(`<b>🏆 Achievement unlocked!</b><br>&gt; 📸 <i>*Tách!*</i> Bạn đã tìm ra easter egg.<br>&gt; Phần thưởng: 1 tấm ảnh chung với ${escapeHtml(CONFIG.shortName)} vào ngày lễ! 🎓`);
+      eggRunning = false;
+      return;
+    }
+
+    overlay.hidden = false;
+    requestAnimationFrame(() => {
+      vf.classList.add("active");
+      cam.classList.add("pop-in");
+    });
+
+    // Lúc 550ms: máy ảnh chụp TÁCH!
+    setTimeout(() => {
+      if (shutter) shutter.classList.add("press");
+      if (iris) iris.classList.add("closed");
+
+      playCameraShutterSound();
+
+      // Màn hình chớp sáng
+      flash.classList.add("flash-boom");
+      setTimeout(() => { flash.classList.remove("flash-boom"); }, 60);
+
+      cam.classList.add("recoil");
+      snapText.classList.add("boom");
+
+      celebrate(0.8);
+
+      setTimeout(() => {
+        if (shutter) shutter.classList.remove("press");
+        if (iris) iris.classList.remove("closed");
+      }, 160);
+    }, 550);
+
+    // Lúc 1400ms: thu gọn máy ảnh
+    setTimeout(() => {
+      vf.classList.remove("active");
+      cam.classList.remove("pop-in");
+      cam.style.opacity = "0";
+      cam.style.transform = "translate(-50%, -50%) scale(0.7) translateY(60px)";
+    }, 1400);
+
+    // Lúc 1750ms: hoàn thành và hiện Achievement
+    setTimeout(() => {
+      overlay.hidden = true;
+      cam.style.opacity = "";
+      cam.style.transform = "";
+      cam.classList.remove("recoil");
+      snapText.classList.remove("boom");
+      eggRunning = false;
+
+      toast(`<b>🏆 Achievement unlocked!</b><br>&gt; 📸 <i>*Tách!*</i> Đã bắt trọn khoảnh khắc tốt nghiệp.<br>&gt; Phần thưởng: 1 tấm ảnh check-in chung với ${escapeHtml(CONFIG.shortName)} vào ngày lễ! 🎓`);
+    }, 1750);
   }
   $("capBtn").addEventListener("click", () => {
     const b = $("capBtn"); b.classList.remove("wiggle"); void b.offsetWidth; b.classList.add("wiggle");

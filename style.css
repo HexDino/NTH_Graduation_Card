@@ -251,6 +251,149 @@ body.opened .card { animation: cardIn .9s cubic-bezier(.2,.8,.2,1) both; }
 .toast b { color: var(--gold-bright); }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 16px); } }
 
+/* ===== Easter Egg: Máy ảnh chụp "Tách!" ===== */
+.camera-egg {
+  position: fixed; inset: 0; z-index: 95;
+  pointer-events: none; overflow: hidden;
+}
+
+/* Flash màn hình */
+.camera-flash {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at center, #ffffff 40%, rgba(255,248,225,.95) 100%);
+  opacity: 0; pointer-events: none; z-index: 105;
+  transition: opacity .4s ease-out;
+}
+.camera-flash.flash-boom {
+  opacity: 1;
+  transition: none;
+}
+
+/* Khung ngắm Viewfinder */
+.camera-viewfinder {
+  position: absolute; inset: 0; pointer-events: none; z-index: 98;
+  opacity: 0; transform: scale(1.04);
+  transition: opacity .3s ease, transform .3s ease;
+}
+.camera-viewfinder.active {
+  opacity: 1; transform: scale(1);
+}
+.vf-corner {
+  position: absolute; width: 32px; height: 32px;
+  border-color: rgba(232,207,138,0.85); border-style: solid;
+}
+.vf-corner.tl { top: max(20px, env(safe-area-inset-top)); left: max(20px, env(safe-area-inset-left)); border-width: 3px 0 0 3px; }
+.vf-corner.tr { top: max(20px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); border-width: 3px 3px 0 0; }
+.vf-corner.bl { bottom: max(20px, env(safe-area-inset-bottom)); left: max(20px, env(safe-area-inset-left)); border-width: 0 0 3px 3px; }
+.vf-corner.br { bottom: max(20px, env(safe-area-inset-bottom)); right: max(20px, env(safe-area-inset-right)); border-width: 0 3px 3px 0; }
+
+.vf-target {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.vf-circle {
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 2px dashed rgba(232,207,138,0.8);
+  animation: vfSpin 6s linear infinite;
+}
+@keyframes vfSpin { to { transform: rotate(360deg); } }
+.vf-cross {
+  position: absolute; top: 45px; left: 45px; width: 14px; height: 14px;
+  transform: translate(-50%, -50%);
+}
+.vf-cross::before, .vf-cross::after {
+  content: ""; position: absolute; background: var(--gold-bright);
+}
+.vf-cross::before { top: 0; left: 6px; width: 2px; height: 14px; }
+.vf-cross::after { top: 6px; left: 0; width: 14px; height: 2px; }
+
+.vf-lock {
+  color: #2ed573; font: 700 .75rem var(--mono); letter-spacing: .08em;
+  background: rgba(3,10,22,.7); padding: 2px 8px; border-radius: 4px;
+  border: 1px solid #2ed573; text-shadow: 0 0 8px rgba(46,213,115,.7);
+}
+
+.vf-meta {
+  position: absolute; bottom: max(26px, env(safe-area-inset-bottom)); left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(3,10,22,.75); padding: 6px 14px; border-radius: 999px;
+  color: var(--gold-bright); font: 500 .76rem var(--mono); letter-spacing: .05em;
+  border: 1px solid rgba(201,162,78,.4); white-space: nowrap;
+}
+.vf-rec { display: inline-flex; align-items: center; gap: 6px; color: #ff4757; font-weight: 700; }
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; animation: blink 1s steps(1) infinite; }
+
+/* Thân máy ảnh hiện lên */
+.camera-unit {
+  position: absolute; top: 50%; left: 50%; z-index: 100;
+  transform: translate(-50%, -50%) scale(0.4) translateY(80px) rotate(-6deg);
+  opacity: 0;
+  transition: transform .45s cubic-bezier(.175,.885,.32,1.275), opacity .3s ease;
+  display: flex; flex-direction: column; align-items: center;
+}
+.camera-unit.pop-in {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1) translateY(0) rotate(0deg);
+}
+.camera-unit.recoil {
+  animation: camRecoil .3s ease-out;
+}
+@keyframes camRecoil {
+  0% { transform: translate(-50%, -50%) scale(1) translateY(0); }
+  25% { transform: translate(-50%, -50%) scale(1.08) translateY(-6px); }
+  60% { transform: translate(-50%, -50%) scale(0.96) translateY(3px); }
+  100% { transform: translate(-50%, -50%) scale(1) translateY(0); }
+}
+
+.cam-svg {
+  display: block;
+  max-width: min(88vw, 300px);
+  height: auto;
+  filter: drop-shadow(0 25px 50px rgba(0,0,0,0.7));
+}
+
+.cam-shutter-btn {
+  transition: transform .1s;
+  transform-origin: center;
+}
+.cam-shutter-btn.press {
+  transform: translateY(4px);
+}
+
+.cam-iris {
+  transition: r .08s ease-in;
+}
+.cam-iris.closed {
+  r: 2px;
+}
+
+.cam-af-light {
+  animation: afBlink .3s steps(1) infinite;
+}
+@keyframes afBlink { 50% { opacity: 0.2; } }
+
+/* Chữ TÁCH! 📸 nổ lên */
+.cam-snap-text {
+  position: absolute; top: -36px;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+  color: var(--navy-deep); font: 800 1.25rem/1 var(--sans);
+  padding: 8px 18px; border-radius: 999px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 0 2px #fff;
+  opacity: 0; transform: scale(0.4) translateY(20px);
+  pointer-events: none;
+}
+.cam-snap-text.boom {
+  animation: snapBoom .8s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+@keyframes snapBoom {
+  0% { opacity: 0; transform: scale(0.4) translateY(20px); }
+  30% { opacity: 1; transform: scale(1.15) translateY(-10px); }
+  70% { opacity: 1; transform: scale(1) translateY(-6px); }
+  100% { opacity: 0; transform: scale(0.8) translateY(-25px); }
+}
+
 @media (min-width: 900px) {
   .stage { padding-top: 48px; }
   .card-inner { padding: 44px 44px 40px; }
